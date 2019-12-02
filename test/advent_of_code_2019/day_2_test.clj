@@ -5,9 +5,9 @@
             [clojure.test :refer :all]))
 
 (def- solution-one-example-output
-  [{:pc 0 :prg [1 9 10 3 2 3 11 0 99 30 40 50] :halted? false}
-   {:pc 4 :prg [1 9 10 70 2 3 11 0 99 30 40 50] :halted? false}
-   {:pc 8 :prg [3500 9 10 70 2 3 11 0 99 30 40 50] :halted? false}])
+  [{:ip 0 :prg [1 9 10 3 2 3 11 0 99 30 40 50] :halted? false}
+   {:ip 4 :prg [1 9 10 70 2 3 11 0 99 30 40 50] :halted? false}
+   {:ip 8 :prg [3500 9 10 70 2 3 11 0 99 30 40 50] :halted? false}])
 
 (defn- execute-and-get-final-state-of [prg]
   (->> (step-program (parse-input prg))
