@@ -4,7 +4,7 @@
             [clojure.string :as string]))
 
 (def- problem-input
-  (->> (string/trim (slurp (io/resource "day-1-input.txt")))))
+  (string/trim (slurp (io/resource "day-1-input.txt"))))
 
 (defn- parse-input [input]
   (->> input
