@@ -30,18 +30,40 @@
    (fn [{:keys [curr points]} dir]
      (let [new-points (follow-step curr dir)]
        {:curr   (last new-points)
-        :points (into points new-points)}))
+        :points (concat points new-points)}))
    {:curr   [0 0]
-    :points #{}}
+    :points #{[0 0]}}
    path))
+
+(defn- points-of-intersection [wire-1 wire-2]
+  (set/difference
+   (set/intersection (into #{} (:points wire-1)) (into #{} (:points wire-2)))
+   #{[0 0]}))
 
 (defn- manhattan-distance-from-origin [[x y]]
   (+ (Math/abs x) (Math/abs y)))
 
+(defn- manhattan-distance-to-intersection [wire-1 wire-2]
+  (map manhattan-distance-from-origin (points-of-intersection wire-1 wire-2)))
+
 (defn solution-part-one [input]
   (->> (parse-input input)
-     (map follow-path)
-     (map :points)
-     (apply set/intersection)
-     (map manhattan-distance-from-origin)
-     (apply min)))
+       (map follow-path)
+       (apply manhattan-distance-to-intersection)
+       (apply min)))
+
+;; Part two
+
+(defn- index-of [x coll]
+  (first (keep-indexed (fn [idx item] (if (= x item) idx)) coll)))
+
+(defn- total-distance-to-intersection [wire-1 wire-2]
+  (for [point (points-of-intersection wire-1 wire-2)]
+    (+ (index-of point (:points wire-1))
+       (index-of point (:points wire-2)))))
+
+(defn solution-part-two [input]
+  (->> (parse-input input)
+       (map follow-path)
+       (apply total-distance-to-intersection)
+       (apply min)))
