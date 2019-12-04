@@ -7,7 +7,7 @@
 (def- problem-input
   (string/trim (slurp (io/resource "day-3-input.txt"))))
 
-(defn parse-step [s]
+(defn- parse-step [s]
   (let [[dir & len] s]
     {:dir dir
      :len (Long/parseLong (string/join len))}))
