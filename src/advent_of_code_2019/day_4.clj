@@ -10,10 +10,25 @@
 (defn two-adjacent-characters? [s]
   (re-find #"(.)\1" s))
 
-(def- valid-password?
+(def valid-basic-password?
   (every-pred digits-increase? two-adjacent-characters?))
 
-(defn solution-part-one [input]
+(defn solution-part-one []
   (->> (for [x (range lower-bound (inc upper-bound))] (str x))
-       (filter valid-password?)
+       (filter valid-basic-password?)
        (count)))
+
+;; Part two
+
+(defn exactly-two-adjacent-characters? [s]
+  (->> (partition-by identity s)
+       (some (fn [x] (= (count x) 2)))))
+
+(def valid-strict-password?
+  (every-pred digits-increase? two-adjacent-characters? exactly-two-adjacent-characters?))
+
+(defn solution-part-two []
+  (->> (for [x (range lower-bound (inc upper-bound))] (str x))
+       (filter valid-strict-password?)
+       (count)))
+
