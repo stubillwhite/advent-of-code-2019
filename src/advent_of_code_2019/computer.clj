@@ -34,6 +34,8 @@
 (ns-unmap *ns* 'execute-instruction)
 (defmulti execute-instruction (fn [x] (:opcode (current-instruction x))))
 
+;; TODO: Refactor all this
+
 (defmethod execute-instruction 1 [{:keys [ip prg] :as computer}]
   (let [{:keys [a-mode b-mode]} (current-instruction computer)
         [_ a b addr]            (drop ip prg)]
@@ -63,6 +65,36 @@
     (assoc computer
            :ip     (+ ip 2)
            :stdout (conj stdout (read-value a-mode prg a)))))
+
+(defmethod execute-instruction 5 [{:keys [ip prg] :as computer}]
+  (let [{:keys [a-mode b-mode]} (current-instruction computer)
+        [_ a b]                 (drop ip prg)]
+    (assoc computer
+           :ip (if (not (zero? (read-value a-mode prg a)))
+                 (read-value b-mode prg b)
+                 (+ ip 3)))))
+
+(defmethod execute-instruction 6 [{:keys [ip prg] :as computer}]
+  (let [{:keys [a-mode b-mode]} (current-instruction computer)
+        [_ a b]                 (drop ip prg)]
+    (assoc computer
+           :ip (if (zero? (read-value a-mode prg a))
+                 (read-value b-mode prg b)
+                 (+ ip 3)))))
+
+(defmethod execute-instruction 7 [{:keys [ip prg] :as computer}]
+  (let [{:keys [a-mode b-mode]} (current-instruction computer)
+        [_ a b c]                (drop ip prg)]
+    (assoc computer
+           :prg (write-value 0 prg c (if (< (read-value a-mode prg a) (read-value b-mode prg b)) 1 0))
+           :ip  (+ ip 4))))
+
+(defmethod execute-instruction 8 [{:keys [ip prg] :as computer}]
+  (let [{:keys [a-mode b-mode]} (current-instruction computer)
+        [_ a b c]                (drop ip prg)]
+    (assoc computer
+           :prg (write-value 0 prg c (if (= (read-value a-mode prg a) (read-value b-mode prg b)) 1 0))
+           :ip  (+ ip 4))))
 
 (defmethod execute-instruction 99 [{:keys [ip] :as computer}]
   (assoc computer :halted? true))

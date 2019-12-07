@@ -14,3 +14,10 @@
 (defn solution-part-one []
   (->> (cmp/initialise-computer (parse-input problem-input) [1])
        (cmp/execute-program)))
+
+;; Part two
+
+(defn solution-part-two []
+  (->> (cmp/initialise-computer (parse-input problem-input) [5])
+       (cmp/execute-program)))
+

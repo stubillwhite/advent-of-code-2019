@@ -5,3 +5,5 @@
 (deftest solution-part-one-given-problem-input-then-problem-result
   (is (= 14155342 (last (:stdout (solution-part-one))))))
 
+(deftest solution-part-two-given-problem-input-then-problem-result
+  (is (= 8684145 (last (:stdout (solution-part-two))))))

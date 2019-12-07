@@ -28,6 +28,8 @@
       (is (= [10 11 50 13 14] (write-value 1 prg 2 50)))
       (is (= [10 11 12 50 14] (write-value 1 prg 3 50))))))
 
+;; TODO: Test instructions
+
 ;; Example programs
 
 (defn- create-program [input]
@@ -51,6 +53,11 @@
   (->> (create-computer prg)
        (execute-program)
        (prg-of)))
+
+(defn- execute-and-get-stdout [prg stdin]
+  (->> (create-computer prg stdin)
+       (execute-program)
+       (stdout-of)))
 
 (deftest step-program-given-day-two-example-input-then-example-result
   (testing "stepping example program"
@@ -76,3 +83,11 @@
   (let [final-state (execute-program (create-computer "3,0,4,0,99" [23]))]
     (is (= "23,0,4,0,99" (prg-of final-state)))
     (is (= "23"          (stdout-of final-state)))))
+
+(deftest execute-program-given-day-five-example-input-then-example-stdout
+  (let [prg (string/join ["3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,"
+                          "1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,"
+                          "999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99"])]
+    (is (= "999"  (execute-and-get-stdout prg [7])))
+    (is (= "1000" (execute-and-get-stdout prg [8])))
+    (is (= "1001" (execute-and-get-stdout prg [9])))))
