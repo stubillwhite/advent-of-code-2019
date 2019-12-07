@@ -1,0 +1,7 @@
+(ns advent-of-code-2019.day-5-test
+  (:require [advent-of-code-2019.day-5 :refer :all]
+            [clojure.test :refer :all]))
+
+(deftest solution-part-one-given-problem-input-then-problem-result
+  (is (= 14155342 (last (:stdout (solution-part-one))))))
+
