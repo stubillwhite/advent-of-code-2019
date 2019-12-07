@@ -1,7 +1,7 @@
 (ns advent-of-code-2019.day-6
-  (:require [advent-of-code-2019.computer :as cmp]
-            [advent-of-code-2019.utils :refer [def-]]
+  (:require [advent-of-code-2019.utils :refer [def-]]
             [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.string :as string]))
 
 (def- problem-input
@@ -28,3 +28,18 @@
          (map (fn [x] (orbits-of-planet graph x)))
          (map count)
          (apply +))))
+
+;; Part two
+
+(defn- path-to-each-other [graph a b]
+  (let [a-xfers (path-to-centre graph a)
+        b-xfers (path-to-centre graph b)]
+    (set/difference
+     (set/union 
+      (set/difference (set a-xfers) (set b-xfers))
+      (set/difference (set b-xfers) (set a-xfers)))
+     #{a b})))
+
+(defn solution-part-two [input]
+  (let [graph (build-graph (parse-input input))]
+    (count (path-to-each-other graph "YOU" "SAN"))))
