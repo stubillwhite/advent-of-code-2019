@@ -1,6 +1,5 @@
 (ns advent-of-code-2019.computer-test
   (:require [advent-of-code-2019.computer :refer :all]
-            [advent-of-code-2019.utils :refer [def-]]
             [clojure.string :as string]
             [clojure.test :refer :all]))
 
@@ -20,11 +19,12 @@
   ([prg]
    (create-computer prg ""))
   ([prg stdin]
-   (initialise-computer (from-csv prg) (from-csv stdin))))
+   (-> (initialise-computer (from-csv prg))
+       (pipe-to-stdin! (from-csv stdin)))))
 
 (defn- prg-of    [cmp] (to-csv (:prg cmp)))
-(defn- stdout-of [cmp] (to-csv (:stdout cmp)))
-(defn- stdin-of  [cmp] (to-csv (:stdin cmp)))
+(defn- stdout-of [cmp] (to-csv (read-stdout cmp)))
+(defn- stdin-of  [cmp] (to-csv (read-stdin cmp)))
 
 (defn- execute
   ([prg]

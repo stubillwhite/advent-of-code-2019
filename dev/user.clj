@@ -4,11 +4,15 @@
             [clojure.reflect :refer [reflect]]
             [clojure.repl :refer [apropos dir doc find-doc pst source]]
             [clojure.stacktrace :refer [print-stack-trace]]
+            [taoensso.timbre :as timbre]
             [clojure.test :as test]
             [clojure.edn :as edn]
             [clojure.tools.namespace.repl :refer [refresh refresh-all]]
             [clojure.tools.trace :refer [trace-ns untrace-ns]]
             [mount.core :as mount]))
+
+(timbre/refer-timbre)
+(timbre/set-level! (keyword :warn))
 
 (defn print-methods [x]
   (->> x

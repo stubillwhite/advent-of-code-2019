@@ -15,7 +15,8 @@
                  [org.clojure/clojure "1.10.1"]
                  [com.taoensso/timbre "4.10.0"]
                  [org.clojure/tools.trace "0.7.10"]
-                 [mount "0.1.16"]]
+                 [mount "0.1.16"]
+                 [org.clojure/core.async "0.6.532"]]
   
   :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.3.1"]]
                    :source-paths ["dev"]}})

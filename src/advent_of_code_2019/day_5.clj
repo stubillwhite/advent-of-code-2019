@@ -12,12 +12,16 @@
        (map (fn [x] (Long/parseLong x)))))
 
 (defn solution-part-one []
-  (->> (cmp/initialise-computer (parse-input problem-input) [1])
-       (cmp/execute-program)))
+  (-> (cmp/initialise-computer (parse-input problem-input))
+      (cmp/pipe-to-stdin! [1])
+      (cmp/execute-program)
+      (cmp/read-stdout)))
 
 ;; Part two
 
 (defn solution-part-two []
-  (->> (cmp/initialise-computer (parse-input problem-input) [5])
-       (cmp/execute-program)))
+  (-> (cmp/initialise-computer (parse-input problem-input))
+      (cmp/pipe-to-stdin! [5])
+      (cmp/execute-program)
+      (cmp/read-stdout)))
 

@@ -19,7 +19,7 @@
                 2 verb)))
 
 (defn solution-part-one []
-  (-> (cmp/initialise-computer (parse-input problem-input) [])
+  (-> (cmp/initialise-computer (parse-input problem-input))
       (initialise-program 12 2)
       (cmp/execute-program)
       (:prg)
@@ -33,7 +33,7 @@
     [n v]))
 
 (defn solution-part-two []
-  (let [computer   (cmp/initialise-computer (parse-input problem-input) [])
+  (let [computer   (cmp/initialise-computer (parse-input problem-input))
         calc-input (fn [[n v]] (+ (* 100 n) v))]
     (->> nouns-and-verbs
          (filter (fn [[n v]] (= 19690720 (->> (initialise-program computer n v)
