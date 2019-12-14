@@ -36,18 +36,28 @@
 
 ;; Addressing modes
 
+(defn- assoc-or-grow [m k v]
+  (let [curr-size (count m)]
+    (if (<= curr-size k)
+      (assoc (into [] (concat m (repeat (- k curr-size) 0))) k v)
+      (assoc m k v))))
+
 (ns-unmap *ns* 'read-value)
 (ns-unmap *ns* 'write-value)
 (defmulti read-value  (fn [mode prg x] mode))
 (defmulti write-value (fn [mode prg x v] mode))
 
 ;; Position mode
-(defmethod read-value  0 [mode prg x]   (nth prg x))
-(defmethod write-value 0 [mode prg x v] (assoc prg x v))
+(defmethod read-value  0 [mode {:keys [prg]} x]   (nth prg x 0))
+(defmethod write-value 0 [mode {:keys [prg]} x v] (assoc-or-grow prg x v))
 
 ;; Immediate mode
-(defmethod read-value  1 [mode prg x]   x)
-(defmethod write-value 1 [mode prg x v] (assoc prg x v))
+(defmethod read-value  1 [mode {:keys [prg]} x]   x)
+(defmethod write-value 1 [mode {:keys [prg]} x v] (assoc-or-grow prg x v))
+
+;; Relative mode
+(defmethod read-value  2 [mode {:keys [rel-base prg]} x]   (nth prg (+ rel-base x) 0))
+(defmethod write-value 2 [mode {:keys [rel-base prg]} x v] (assoc-or-grow prg (+ rel-base x) v))
 
 ;; Instruction set
 
@@ -57,24 +67,24 @@
 (defmethod execute-instruction 1 [{:keys [ip prg] :as computer} [a b c] [a-mode b-mode c-mode]]
   (assoc computer
          :ip  (+ ip 4)
-         :prg (write-value 0 prg c (+ (read-value a-mode prg a)
-                                      (read-value b-mode prg b)))))
+         :prg (write-value c-mode computer c (+ (read-value a-mode computer a)
+                                                (read-value b-mode computer b)))))
 
 (defmethod execute-instruction 2 [{:keys [ip prg] :as computer} [a b c] [a-mode b-mode c-mode]]
   (assoc computer
          :ip  (+ ip 4)
-         :prg (write-value 0 prg c (* (read-value a-mode prg a)
-                                      (read-value b-mode prg b)))))
+         :prg (write-value c-mode computer c (* (read-value a-mode computer a)
+                                                (read-value b-mode computer b)))))
 
 (defmethod execute-instruction 3 [{:keys [id ip prg stdin] :as computer} [a] [a-mode]]
   (let [value (blocking-read! stdin)]
     (debug (format "[%s] Read value %d" id value))
     (assoc computer
            :ip    (+ ip 2)
-           :prg   (write-value 0 prg a value))))
+           :prg   (write-value a-mode computer a value))))
 
 (defmethod execute-instruction 4 [{:keys [id ip prg stdout] :as computer} [a] [a-mode]]
-  (let [value (read-value a-mode prg a)]
+  (let [value (read-value a-mode computer a)]
     (non-blocking-write! stdout value)
     (debug (format "[%s] Wrote value %d" id value))
     (assoc computer
@@ -82,28 +92,32 @@
 
 (defmethod execute-instruction 5 [{:keys [ip prg] :as computer} [a b] [a-mode b-mode]]
   (assoc computer
-         :ip (if (not (zero? (read-value a-mode prg a)))
-               (read-value b-mode prg b)
+         :ip (if (not (zero? (read-value a-mode computer a)))
+               (read-value b-mode computer b)
                (+ ip 3))))
 
 (defmethod execute-instruction 6 [{:keys [ip prg] :as computer} [a b] [a-mode b-mode]]
   (assoc computer
-         :ip (if (zero? (read-value a-mode prg a))
-               (read-value b-mode prg b)
+         :ip (if (zero? (read-value a-mode computer a))
+               (read-value b-mode computer b)
                (+ ip 3))))
 
 (defmethod execute-instruction 7 [{:keys [ip prg] :as computer} [a b c] [a-mode b-mode c-mode]]
   (assoc computer
-         :prg (write-value 0 prg c (if (< (read-value a-mode prg a) (read-value b-mode prg b)) 1 0))
-         :ip  (+ ip 4)))
+         :ip  (+ ip 4)
+         :prg (write-value c-mode computer c (if (< (read-value a-mode computer a) (read-value b-mode computer b)) 1 0))))
 
 (defmethod execute-instruction 8 [{:keys [ip prg] :as computer} [a b c] [a-mode b-mode c-mode]]
   (assoc computer
-         :prg (write-value 0 prg c (if (= (read-value a-mode prg a) (read-value b-mode prg b)) 1 0))
-         :ip  (+ ip 4)))
+         :ip  (+ ip 4)
+         :prg (write-value c-mode computer c (if (= (read-value a-mode computer a) (read-value b-mode computer b)) 1 0))))
+
+(defmethod execute-instruction 9 [{:keys [ip rel-base] :as computer} [a] [a-mode]]
+  (assoc computer
+         :ip       (+ ip 2)
+         :rel-base (+ rel-base (read-value a-mode computer a))))
 
 (defmethod execute-instruction 99 [{:keys [id] :as computer} [_] [_]]
-  (debug (format "[%s] Halted" id))
   (assoc computer
          :halted? true))
 
@@ -128,12 +142,13 @@
   ([prg & {:keys [id stdin stdout] :or {stdin  (chan)
                                         stdout (chan)
                                         id     (.toString (UUID/randomUUID))}}]
-   {:id      id
-    :ip      0
-    :prg     (into [] prg)
-    :stdin   stdin
-    :stdout  stdout
-    :halted? false}))
+   {:id       id
+    :ip       0
+    :rel-base 0
+    :prg      (into [] prg)
+    :stdin    stdin
+    :stdout   stdout
+    :halted?  false}))
 
 (defn step-program
   "Returns a lazy seq of all states of the computer until it halts."
