@@ -33,3 +33,33 @@
        (to-layers width height)
        (fewest-of-value 0)
        (integrity-check)))
+
+;; Part two
+
+(defn- transparent? [v]
+  (= v 2))
+
+(defn- to-visible-pixels [layers]
+  (->> layers
+       (apply (partial map vector))
+       (map (partial drop-while transparent?))
+       (map first)))
+
+(defn- render-pixels [width pixels]
+  (->> pixels
+       (partition width)
+       (map string/join)
+       (string/join "\n")))
+
+(defn solution-part-two [input width height]
+  (->> (parse-input input)
+       (to-layers width height)
+       (to-visible-pixels)
+       (render-pixels width)))
+
+(defn display-result [s]
+  (-> s
+      (string/replace #"0" " ")
+      (string/replace #"1" "#")
+      (format "\n%s\n")
+      (println)))
