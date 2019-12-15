@@ -171,7 +171,7 @@
     computer))
 
 (defn read-stdout
-  "Returns the stdout from a halted computer. Will block if the computer is not halted." ;; TODO: Fix text
+  "Returns the stdout from a halted computer. Will block if the computer is not halted."
   [computer]
   (close-and-consume! (:stdout computer)))
 

@@ -17,14 +17,66 @@
 (defn- angle [[x1 y1] [x2 y2]]
   (Math/atan2 (- y2 y1) (- x2 x1)))
 
-(defn- angles-to-other-asteroids [asteroid asteroids]
-  (map (partial angle asteroid) (disj asteroids asteroid)))
+(defn- distance [[x1 y1] [x2 y2]]
+  (+ (Math/abs (- x1 x2)) (Math/abs (- y1 y2))))
 
-(defn visible-asteroids [xy asteroids]
-  (count (set (angles-to-other-asteroids xy asteroids))))
+(defn- asteroid-bearings-from [point asteroids]
+  (map
+   (fn [location]
+     {:location location
+      :angle    (angle point location)
+      :distance (distance point location)})
+   (disj asteroids point)))
+
+(defn asteroids-visible-from [point asteroids]
+  (count (set (map :angle (asteroid-bearings-from point asteroids)))))
 
 (defn solution-part-one [input]
   (let [asteroids (parse-input input)]
     (->> asteroids
-         (map (fn [x] {:loc x :visible (visible-asteroids x asteroids)}))
+         (map (fn [x] {:location x :visible (asteroids-visible-from x asteroids)}))
          (apply max-key :visible))))
+
+;; Part two
+
+(defn- group-by-angle [infos]
+  (reduce
+   (fn [acc info] (update acc (:angle info) (partial cons info)))
+   {}
+   infos))
+
+(defn- group-by-angle-and-order-by-distance [infos]
+  (->> infos
+       (group-by-angle)
+       (map (fn [[angle infos]] [angle (sort-by :distance infos)]))
+       (sort-by (fn [[angle infos]] [angle infos]))))
+
+(defn- vaporize-and-move-on [data]
+  (if (empty? data)
+    nil
+    (let [[angle planets] (first data)]
+      (cons (first planets)
+            (lazy-seq
+             (vaporize-and-move-on
+              (if (empty? (rest planets))
+                (rest data)
+                (concat (rest data) [[angle (rest planets)]]))))))))
+
+(defn- rotate-while [f coll]
+  (take (count coll) (drop-while f (cycle coll))))
+
+(defn- starting-directly-up [locations]
+  (rotate-while (fn [[angle info]] (< angle (/ Math/PI -2))) locations))
+
+(defn vaporization-sequence [input laser-location]
+  (->> (parse-input input)
+       (asteroid-bearings-from laser-location)
+       (group-by-angle-and-order-by-distance)
+       (starting-directly-up)
+       (vaporize-and-move-on)))
+
+(defn solution-part-two [input]
+  (let [laser-location     (:location (solution-part-one input))
+        {:keys [location]} (nth (vaporization-sequence input laser-location) 199)
+        [x y]              location]
+    (+ (* x 100) y)))
