@@ -20,11 +20,11 @@
    (create-computer prg ""))
   ([prg stdin]
    (-> (initialise-computer (from-csv prg))
-       (pipe-to-stdin! (from-csv stdin)))))
+       (assoc-in [:io :stdin] (from-csv stdin)))))
 
 (defn- prg-of    [cmp] (to-csv (:prg cmp)))
-(defn- stdout-of [cmp] (to-csv (read-stdout cmp)))
-(defn- stdin-of  [cmp] (to-csv (read-stdin cmp)))
+(defn- stdin-of  [cmp] (to-csv (get-in cmp [:io :stdin])))
+(defn- stdout-of [cmp] (to-csv (get-in cmp [:io :stdout])))
 
 (defn- execute
   ([prg]

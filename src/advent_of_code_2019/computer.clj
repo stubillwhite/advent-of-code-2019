@@ -1,5 +1,6 @@
 (ns advent-of-code-2019.computer
-  (:require [clojure.core.async :as async :refer [<! <!! chan close! go put!]]
+  (:require [advent-of-code-2019.computer-io :as cmp-io]
+            [clojure.core.async :refer [chan]]
             [clojure.string :as string]
             [taoensso.timbre :as timbre])
   (:import java.util.UUID))
@@ -18,22 +19,6 @@
      :b-mode b-mode
      :c-mode c-mode}))
 
-;; Asynchronous primitives
-
-(defn- blocking-read! [ch]
-  (<!! (go (<! ch))))
-
-(defn- non-blocking-write! [ch v]
-  (if-not (put! ch v)
-    (throw (RuntimeException. (format "Failed to write value '%s' because channel is closed" v)))))
-
-(defn- close-and-consume! [ch]
-  (close! ch)
-  (<!! (async/reduce conj [] ch)))
-
-(defn- put-all! [ch coll]
-  (dorun (map (partial non-blocking-write! ch) coll)))
-
 ;; Addressing modes
 
 (defn- assoc-or-grow [m k v]
@@ -48,16 +33,33 @@
 (defmulti write-value (fn [mode prg x v] mode))
 
 ;; Position mode
-(defmethod read-value  0 [mode {:keys [prg]} x]   (nth prg x 0))
-(defmethod write-value 0 [mode {:keys [prg]} x v] (assoc-or-grow prg x v))
+(defmethod read-value 0 [mode {:keys [id prg]} x]
+  (let [value (nth prg x 0)]
+    (trace (format "[%s] Read (positional) value %d from %d" id value x))
+    value))
+
+(defmethod write-value 0 [mode {:keys [id prg]} x v]
+  (trace (format "[%s] Write (positional) value %d to %d" id v x))
+  (assoc-or-grow prg x v))
 
 ;; Immediate mode
-(defmethod read-value  1 [mode {:keys [prg]} x]   x)
-(defmethod write-value 1 [mode {:keys [prg]} x v] (assoc-or-grow prg x v))
+(defmethod read-value 1 [mode {:keys [id]} x]
+  (trace (format "[%s] Read (immediate) value %d" id x))
+  x)
+
+(defmethod write-value 1 [mode {:keys [id prg]} x v]
+  (trace (format "[%s] Write (immediate) value %d to %d" id v x))
+  (assoc-or-grow prg x v))
 
 ;; Relative mode
-(defmethod read-value  2 [mode {:keys [rel-base prg]} x]   (nth prg (+ rel-base x) 0))
-(defmethod write-value 2 [mode {:keys [rel-base prg]} x v] (assoc-or-grow prg (+ rel-base x) v))
+(defmethod read-value  2 [mode {:keys [id rel-base prg]} x]
+  (let [value (nth prg (+ rel-base x) 0)]
+    (trace (format "[%s] Read (relative) value %d from %d (%d + %d)" id value (+ rel-base x) rel-base x))
+    value))
+
+(defmethod write-value 2 [mode {:keys [id rel-base prg]} x v]
+  (trace (format "[%s] Write (relative) value %d to %d (%d + %d)" id v (+ rel-base x) rel-base x))
+  (assoc-or-grow prg (+ rel-base x) v))
 
 ;; Instruction set
 
@@ -76,18 +78,19 @@
          :prg (write-value c-mode computer c (* (read-value a-mode computer a)
                                                 (read-value b-mode computer b)))))
 
-(defmethod execute-instruction 3 [{:keys [id ip prg stdin] :as computer} [a] [a-mode]]
-  (let [value (blocking-read! stdin)]
-    (debug (format "[%s] Read value %d" id value))
+(defmethod execute-instruction 3 [{:keys [id ip prg io] :as computer} [a] [a-mode]]
+  (let [[value new-io] (cmp-io/read-from-stdin io)]
+    (debug (format "[%s] Read from stdin value %d" id value))
     (assoc computer
            :ip    (+ ip 2)
+           :io    new-io
            :prg   (write-value a-mode computer a value))))
 
-(defmethod execute-instruction 4 [{:keys [id ip prg stdout] :as computer} [a] [a-mode]]
+(defmethod execute-instruction 4 [{:keys [id ip prg io] :as computer} [a] [a-mode]]
   (let [value (read-value a-mode computer a)]
-    (non-blocking-write! stdout value)
-    (debug (format "[%s] Wrote value %d" id value))
+    (debug (format "[%s] Write to stdout value %d" id value))
     (assoc computer
+           :io (cmp-io/write-to-stdout io value)
            :ip (+ ip 2))))
 
 (defmethod execute-instruction 5 [{:keys [ip prg] :as computer} [a b] [a-mode b-mode]]
@@ -135,19 +138,23 @@
 
 ;; Public
 
+(defn basic-io []
+  (cmp-io/->BasicBufferedIO [] []))
+
+(defn async-io [& {:keys [stdin stdout] :or {stdin (chan) stdout (chan)}}]
+  (cmp-io/->AsyncBufferedIO stdin stdout))
+
 (defn initialise-computer
   "Returns an initialised computer with the specified program, and optionally the specified
   stdin and stdout channels. Data can subseqently be loaded onto stdin by using `pipe-to-stdin!`,
   and read from stdin and stdout using `read-stdin` and `read-stdout` respectively."
-  ([prg & {:keys [id stdin stdout] :or {stdin  (chan)
-                                        stdout (chan)
-                                        id     (.toString (UUID/randomUUID))}}]
+  ([prg & {:keys [id io] :or {io (basic-io)
+                              id (.toString (UUID/randomUUID))}}]
    {:id       id
     :ip       0
     :rel-base 0
     :prg      (into [] prg)
-    :stdin    stdin
-    :stdout   stdout
+    :io       io
     :halted?  false}))
 
 (defn step-program
@@ -162,21 +169,12 @@
   (-> (step-program computer)
       (last)))
 
-(defn pipe-to-stdin!
-  "Returns computer with the side-effect of adding the contents of coll to stdin."
-  [computer coll]
-  (do
-    (debug (format "Loading %s with %s" (:id computer) coll))
-    (put-all! (:stdin computer) coll)
-    computer))
+(defn buffer-to-stdin [computer coll]
+  (update computer :io cmp-io/buffer-to-stdin coll))
 
-(defn read-stdout
-  "Returns the stdout from a halted computer. Will block if the computer is not halted."
-  [computer]
-  (close-and-consume! (:stdout computer)))
+(defn flush-and-read-stdout [{:keys [io]}]
+  (cmp-io/flush-and-read-stdout io))
 
-(defn read-stdin
-  "Returns the stdin from a halted computer. Will block if the computer is not halted."
-  [computer]
-  (close-and-consume! (:stdin computer)))
+(defn flush-and-read-stdin [{:keys [io]}]
+  (cmp-io/flush-and-read-stdin io))
 

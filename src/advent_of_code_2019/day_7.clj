@@ -1,7 +1,7 @@
 (ns advent-of-code-2019.day-7
   (:require [advent-of-code-2019.computer :as cmp]
             [advent-of-code-2019.utils :refer [def-]]
-            [clojure.core.async :as async :refer [<!! chan]]
+            [clojure.core.async :as async :refer [<!!]]
             [clojure.java.io :as io]
             [clojure.string :as string]))
 
@@ -24,9 +24,9 @@
 
 (defn- series-amplifier-stage-output [prg phase input]
   (-> (cmp/initialise-computer prg)
-      (cmp/pipe-to-stdin! [phase input])
+      (cmp/buffer-to-stdin [phase input])
       (cmp/execute-program)
-      (cmp/read-stdout)
+      (cmp/flush-and-read-stdout)
       (first)))
 
 (defn series-amplifier-output [input phases]
@@ -41,27 +41,27 @@
        (apply max-key :output)))
 
 ;; Part two
-;;
-;; Probably the fastest thing to do is refactor stdin/stdout to use channels
 
 (defn- create-feedback-amplifier [prg]
-  (let [a (cmp/initialise-computer prg :id "a")
-        b (cmp/initialise-computer prg :id "b" :stdin (:stdout a))
-        c (cmp/initialise-computer prg :id "c" :stdin (:stdout b))
-        d (cmp/initialise-computer prg :id "d" :stdin (:stdout c))
-        e (cmp/initialise-computer prg :id "e" :stdin (:stdout d) :stdout (:stdin a))]
+  (let [pipe-from (fn [x] (cmp/async-io :stdin (get-in x [:io :stdout])))
+        a (cmp/initialise-computer prg :id "a" :io (cmp/async-io))
+        b (cmp/initialise-computer prg :id "b" :io (pipe-from a))
+        c (cmp/initialise-computer prg :id "c" :io (pipe-from b))
+        d (cmp/initialise-computer prg :id "d" :io (pipe-from c))
+        e (cmp/initialise-computer prg :id "e" :io (cmp/async-io :stdin  (get-in d [:io :stdout])
+                                                                 :stdout (get-in a [:io :stdin])))]
     [a b c d e]))
 
 (defn- execute-feedback-series-amplifier [amps phases]
-  (let [[a b c d e] (doall (map (fn [[computer phase]] (cmp/pipe-to-stdin! computer [phase])) (map vector amps phases)))]
-    (cmp/pipe-to-stdin! a [0])
+  (let [[a b c d e] (doall (map (fn [[computer phase]] (cmp/buffer-to-stdin computer [phase])) (map vector amps phases)))]
+    (cmp/buffer-to-stdin a [0])
     (let [[_ _ _ _ e-halted] (map (fn [x] (async/thread (cmp/execute-program x))) [a b c d e])]
       (<!! e-halted))))
 
 (defn- feedback-series-amplifier-output [input phases]
   (let [amps (create-feedback-amplifier (parse-input input))]
     (->> (execute-feedback-series-amplifier amps phases)
-         (cmp/read-stdout)
+         (cmp/flush-and-read-stdout)
          (first))))
 
 (def- feedback-series-phase-settings
