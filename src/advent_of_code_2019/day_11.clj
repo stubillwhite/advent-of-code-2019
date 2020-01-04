@@ -13,10 +13,10 @@
        (map #(Long/parseLong %))
        (into [])))
 
-(defn- create-robot []
+(defn- create-robot [start-color]
   {:dir    :up
    :loc    [0 0]
-   :panels {}})
+   :panels {[0 0] start-color}})
 
 (defn- turn-left [{:keys [dir] :as robot}]
   (assoc robot :dir (dir {:up    :left
@@ -71,9 +71,33 @@
       (assoc this
              :color v))))
 
-(defn solution-part-one [input]
-  (let [computer (cmp/initialise-computer (parse-input input) :io (->RobotIO (create-robot) nil))]
+(defn- robot-io [start-color]
+  (->RobotIO (create-robot start-color) nil))
+
+(defn paint-hull [input start-color]
+  (let [computer (cmp/initialise-computer (parse-input input) :io (robot-io start-color))]
     (-> (cmp/execute-program computer)
-        (get-in [:io :robot :panels])
-        (keys)
-        (count))))
+        (get-in [:io :robot :panels]))))
+
+(defn solution-part-one [input]
+  (-> (paint-hull input 0)
+      (keys)
+      (count)))
+
+;; Part two
+
+(defn- render-hull [panels]
+  (let [width  (->> panels (keys) (map first) (apply max) (inc))
+        height (->> panels (keys) (map last)  (apply max) (inc))]
+    (->>
+     (for [y (range height)
+           x (range width)]
+       (if (= 1 (get panels [x y])) "#" "."))
+     (partition width)
+     (map (partial apply str))
+     (string/join "\n"))))
+
+(defn solution-part-two [input]
+  (-> (paint-hull input 1)
+      (render-hull)))
+
