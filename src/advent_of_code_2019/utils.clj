@@ -1,4 +1,5 @@
-(ns advent-of-code-2019.utils)
+(ns advent-of-code-2019.utils
+  (:require [clojure.string :as string]))
 
 (defmacro def-
   ([name & decls]
@@ -11,3 +12,6 @@
 (defmacro defmethod-
   [name & decls]
   (list* `defmethod (with-meta name (assoc (meta name) :private true)) decls))
+
+(defn parse-long [s]
+  (Long/parseLong (string/trim s)))
