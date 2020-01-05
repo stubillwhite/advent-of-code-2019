@@ -8,11 +8,6 @@
 (def- problem-input
   (string/trim (slurp (io/resource "day-11-input.txt"))))
 
-(defn- parse-input [input]
-  (->> (string/split input #",")
-       (map #(Long/parseLong %))
-       (into [])))
-
 (defn- create-robot [start-color]
   {:dir    :up
    :loc    [0 0]
@@ -75,7 +70,7 @@
   (->RobotIO (create-robot start-color) nil))
 
 (defn paint-hull [input start-color]
-  (let [computer (cmp/initialise-computer (parse-input input) :io (robot-io start-color))]
+  (let [computer (cmp/initialise-computer (cmp/parse-program input) :io (robot-io start-color))]
     (-> (cmp/execute-program computer)
         (get-in [:io :robot :panels]))))
 

@@ -1,8 +1,8 @@
 (ns advent-of-code-2019.day-3
-  (:require [advent-of-code-2019.utils :refer [def-]]
+  (:require [advent-of-code-2019.utils :refer [def- parse-long]]
             [clojure.java.io :as io]
-            [clojure.string :as string]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [clojure.string :as string]))
 
 (def- problem-input
   (string/trim (slurp (io/resource "day-3-input.txt"))))
@@ -10,7 +10,7 @@
 (defn- parse-step [s]
   (let [[dir & len] s]
     {:dir dir
-     :len (Long/parseLong (string/join len))}))
+     :len (parse-long (string/join len))}))
 
 (defn- parse-input [input]
   (->> input

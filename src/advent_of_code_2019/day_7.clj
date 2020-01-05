@@ -8,11 +8,6 @@
 (def- problem-input
   (string/trim (slurp (io/resource "day-7-input.txt"))))
 
-(defn- parse-input [input]
-  (->> (string/split input #",")
-       (map #(Long/parseLong %))
-       (into [])))
-
 (defn- permutations-of-set [items]
   (if (= (count items) 1)
     [items]
@@ -30,7 +25,7 @@
       (first)))
 
 (defn series-amplifier-output [input phases]
-  (let [prg (parse-input input)]
+  (let [prg (cmp/parse-program input)]
     (reduce (fn [acc x] (series-amplifier-stage-output prg x acc))
             0
             phases)))
@@ -59,7 +54,7 @@
       (<!! e-halted))))
 
 (defn- feedback-series-amplifier-output [input phases]
-  (let [amps (create-feedback-amplifier (parse-input input))]
+  (let [amps (create-feedback-amplifier (cmp/parse-program input))]
     (->> (execute-feedback-series-amplifier amps phases)
          (cmp/flush-and-read-stdout)
          (first))))

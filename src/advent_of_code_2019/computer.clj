@@ -1,5 +1,6 @@
 (ns advent-of-code-2019.computer
   (:require [advent-of-code-2019.computer-io :as cmp-io]
+            [advent-of-code-2019.utils :refer [parse-long]]
             [clojure.core.async :refer [chan]]
             [clojure.string :as string]
             [taoensso.timbre :as timbre])
@@ -143,6 +144,13 @@
 
 (defn async-io [& {:keys [stdin stdout] :or {stdin (chan) stdout (chan)}}]
   (cmp-io/->AsyncBufferedIO stdin stdout))
+
+(defn parse-program
+  "Returns the program parsed from the input string."
+  [input]
+  (->> (string/split input #",")
+       (map parse-long)
+       (into [])))
 
 (defn initialise-computer
   "Returns an initialised computer with the specified program, and optionally the specified

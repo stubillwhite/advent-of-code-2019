@@ -1,5 +1,5 @@
 (ns advent-of-code-2019.day-1
-  (:require [advent-of-code-2019.utils :refer [def-]]
+  (:require [advent-of-code-2019.utils :refer [def- parse-long]]
             [clojure.java.io :as io]
             [clojure.string :as string]))
 
@@ -9,7 +9,7 @@
 (defn- parse-input [input]
   (->> input
        (string/split-lines)
-       (map #(Long/parseLong %))))
+       (map parse-long)))
 
 (defn- fuel-required-for [mass]
   (int (- (Math/floor (/ mass 3)) 2)))

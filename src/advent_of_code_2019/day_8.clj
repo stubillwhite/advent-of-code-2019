@@ -1,5 +1,5 @@
 (ns advent-of-code-2019.day-8
-  (:require [advent-of-code-2019.utils :refer [def-]]
+  (:require [advent-of-code-2019.utils :refer [def- parse-long]]
             [clojure.java.io :as io]
             [clojure.string :as string]))
 
@@ -8,7 +8,7 @@
 
 (defn- parse-input [input]
   (->> input
-       (map #(Long/parseLong (str %)))))
+       (map #(parse-long (str %)))))
 
 (defn- to-layers [width height pixels]
   (->> pixels

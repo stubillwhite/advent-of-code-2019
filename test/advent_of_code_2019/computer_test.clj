@@ -1,5 +1,6 @@
 (ns advent-of-code-2019.computer-test
   (:require [advent-of-code-2019.computer :refer :all]
+            [advent-of-code-2019.utils :refer [parse-long]]
             [clojure.string :as string]
             [clojure.test :refer :all]))
 
@@ -12,7 +13,7 @@
   (if (string/blank? s)
     []
     (->> (string/split s #",")
-         (map #(Long/parseLong %))
+         (map parse-long)
          (into []))))
 
 (defn- create-computer
