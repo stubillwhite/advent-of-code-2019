@@ -6,23 +6,17 @@
 (def- problem-input
   (string/trim (slurp (io/resource "day-12-input.txt"))))
 
-(defn- parse-position [s]
+(defn- parse-position [id s]
   (let [regex   #"<x=(.+), y=(.+), z=(.+)>"
         [x y z] (->> (re-seq regex s) (first) (rest) (map parse-long))]
-    {:pos [x y z]
+    {:id  id
+     :pos [x y z]
      :vel [0 0 0]}))
 
 (defn- parse-input [input]
   (->> input
        (string/split-lines)
-       (map parse-position)))
-
-(def- example-input
-  (string/join "\n"
-               ["<x=-1, y=0, z=2>"
-                "<x=2, y=-10, z=-7>"
-                "<x=4, y=-8, z=8>"
-                "<x=3, y=5, z=-1>"]))
+       (map-indexed parse-position)))
 
 (defn- velocity-change [a b]
   (cond
@@ -47,7 +41,7 @@
   (->> moons
        (apply-gravity)
        (apply-velocity)
-       (into #{})))
+       (set)))
 
 (defn simulate [input]
   (iterate step-simulation (into #{} (parse-input input))))
@@ -65,4 +59,38 @@
       (nth 1000)
       (total-energy-of-system)))
 
+;; Part two
 
+(defn- isolate-plane [plane moon]
+  (let [select-plane (fn [x] [(nth x plane)])]
+    (-> moon
+        (update :pos select-plane)
+        (update :vel select-plane))))
+
+(defn find-period [initial-state]
+  (loop [state initial-state
+         n     0]
+    (let [new-state (step-simulation state)]
+      (if (= new-state initial-state)
+        (inc n)
+        (recur new-state (inc n))))))
+
+(defn- find-period-of-plane [moons plane]
+  (->> moons
+       (map (partial isolate-plane plane))
+       (set)
+       (find-period)))
+
+(defn- gcd [a b]
+  (if (zero? b)
+    a
+    (recur b (mod a b))))
+ 
+(defn- lcm [a b]
+  (/ (* a b) (gcd a b)))
+
+(defn solution-part-two [input]
+  (let [moons (parse-input input)]
+    (->> [0 1 2]
+         (map (partial find-period-of-plane moons))
+         (reduce (fn [acc x] (lcm acc x))))))
